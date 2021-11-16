@@ -1,0 +1,102 @@
+version: "3.3"
+
+services:
+  frontend:
+    build: ./client
+    restart: always
+    hostname: frontend
+    container_name: setel_frontend
+    volumes: 
+      - ./client:/app
+      - /app/node_modules/
+    env_file:
+      - .env
+    ports:
+      - ${FE_PORT}:80
+    networks:
+      - setel
+    depends_on:
+      - redis
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL}
+      - REACT_APP_ORDER_STORAGE_NAME=${REACT_APP_ORDER_STORAGE_NAME}
+      - REACT_APP_AUTH_STORAGE_NAME=${REACT_APP_AUTH_STORAGE_NAME}
+      - GENERATE_SOURCEMAP=${GENERATE_SOURCEMAP}
+
+
+  order:
+    build: ./server/order
+    restart: always
+    hostname: order
+    container_name: setel_order
+    volumes:
+      - ./server/order:/app/order
+      - /app/order/node_modules/
+    env_file:
+      - .env
+    ports:
+      - ${ORDER_PORT}:8000
+      - ${ORDER_DEBUG_PORT}:9229
+    networks:
+      - setel
+    environment:
+      - ORDER_PORT=${ORDER_PORT}
+      - ORDER_DEBUG_PORT=${ORDER_DEBUG_PORT}
+      - PAYMENT_DEBUG_PORT=${PAYMENT_DEBUG_PORT}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_DOMAIN=${REDIS_DOMAIN}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      - MONGO_URL=${MONGO_URL}
+    depends_on:
+      - redis
+    command: yarn run start:debug
+
+  payment:
+    build: ./server/payment
+    restart: always
+    hostname: payment
+    container_name: setel_payment
+    volumes:
+      - ./server/payment:/app/payment
+      - /app/payment/node_modules/
+    env_file:
+      - .env
+    ports:
+      - ${PAYMENT_DEBUG_PORT}:9229
+    networks:
+      - setel
+    environment:
+      - ORDER_PORT=${ORDER_PORT}
+      - ORDER_DEBUG_PORT=${ORDER_DEBUG_PORT}
+      - PAYMENT_DEBUG_PORT=${PAYMENT_DEBUG_PORT}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_DOMAIN=${REDIS_DOMAIN}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      - MONGO_URL=${MONGO_URL}
+    depends_on:
+      - redis
+    command: yarn run start:debug
+
+  redis:
+    image: redis:alpine
+    container_name: Redis
+    hostname: setel_redis
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - ${REDIS_PORT}:6379
+    volumes:
+      - ./redis/data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    environment:
+      - REDIS_REPLICATION_MODE=master
+    networks:
+      - setel
+
+networks:
+  setel:
+    driver: bridge

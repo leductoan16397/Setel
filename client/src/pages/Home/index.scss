@@ -1,0 +1,8 @@
+.product-list{
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow: auto;
+    justify-content: space-between;
+}
